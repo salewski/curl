@@ -1960,12 +1960,12 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
           result = multi_done(&data->easy_conn, CURLE_OK, FALSE);
           if(!result) {
             result = Curl_follow(data, newurl, follow);
+            newurl = NULL; /* handed over the memory ownership to
+                              Curl_follow(), make sure we don't free() it
+                              here */
             if(!result) {
               multistate(data, CURLM_STATE_CONNECT);
               rc = CURLM_CALL_MULTI_PERFORM;
-              newurl = NULL; /* handed over the memory ownership to
-                                Curl_follow(), make sure we don't free() it
-                                here */
             }
           }
         }
@@ -1979,9 +1979,8 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
             newurl = data->req.location;
             data->req.location = NULL;
             result = Curl_follow(data, newurl, FOLLOW_FAKE);
-            if(!result)
-              newurl = NULL; /* allocation was handed over Curl_follow() */
-            else
+            newurl = NULL; /* allocation was handed over to Curl_follow() */
+            if(result)
               stream_error = TRUE;
           }
 
