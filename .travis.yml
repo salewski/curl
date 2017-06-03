@@ -57,7 +57,7 @@ script:
              ./configure --enable-debug --disable-shared --enable-code-coverage
              make
              make TFLAGS=-n test-nonflaky
-             coveralls --gcov /usr/bin/gcov-4.8 --gcov-options '\-lp'
+             coveralls --gcov /usr/bin/gcov-4.8 --gcov-options '\-lp' -i src -i lib -i lib/vtls -i lib/vauth -e tests -e docs
         fi
     - |
         if [ "$BUILD_TYPE" = "normal" ]; then
