@@ -1017,6 +1017,8 @@ void curl_easy_reset(struct Curl_easy *data)
   /* zero out authentication data: */
   memset(&data->state.authhost, 0, sizeof(struct auth));
   memset(&data->state.authproxy, 0, sizeof(struct auth));
+  memset(&data->state.digest, 0, sizeof(struct digestdata));
+  memset(&data->state.proxydigest, 0, sizeof(struct digestdata));
 }
 
 /*
