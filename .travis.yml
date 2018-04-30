@@ -3,7 +3,6 @@ sudo: required
 cache:
     directories:
         - $HOME/libpsl-0.20.1
-        - $HOME/mbedtls-mbedtls-2.8.0
         - $HOME/libidn2-2.0.4
 
 env:
