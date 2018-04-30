@@ -4,7 +4,6 @@ cache:
     directories:
         - $HOME/libpsl-0.20.1
         - $HOME/libidn2-2.0.4
-        - $HOME/wolfssl-3.14.0-stable
 
 env:
     global:
