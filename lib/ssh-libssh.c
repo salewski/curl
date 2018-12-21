@@ -1661,7 +1661,7 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
         sshc->sftp_session = NULL;
       }
 
-      Curl_safefree(sshc->homedir);
+      SSH_STRING_FREE_CHAR(sshc->homedir);
       conn->data->state.most_recent_ftp_entrypath = NULL;
 
       state(conn, SSH_SESSION_DISCONNECT);
@@ -1829,7 +1829,7 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
 
       ssh_disconnect(sshc->ssh_session);
 
-      Curl_safefree(sshc->homedir);
+      SSH_STRING_FREE_CHAR(sshc->homedir);
       conn->data->state.most_recent_ftp_entrypath = NULL;
 
       state(conn, SSH_SESSION_FREE);
@@ -1866,14 +1866,11 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
 
       Curl_safefree(sshc->rsa_pub);
       Curl_safefree(sshc->rsa);
-
       Curl_safefree(sshc->quote_path1);
       Curl_safefree(sshc->quote_path2);
-
-      Curl_safefree(sshc->homedir);
-
       Curl_safefree(sshc->readdir_line);
       Curl_safefree(sshc->readdir_linkPath);
+      SSH_STRING_FREE_CHAR(sshc->homedir);
 
       /* the code we are about to return */
       result = sshc->actualcode;
