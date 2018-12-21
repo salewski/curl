@@ -82,6 +82,7 @@
 #include "multiif.h"
 #include "select.h"
 #include "warnless.h"
+#include "curl_path.h"
 
 /* for permission and open flags */
 #include <sys/types.h>
@@ -93,7 +94,6 @@
 #include "curl_printf.h"
 #include "curl_memory.h"
 #include "memdebug.h"
-#include "curl_path.h"
 
 /* Local functions: */
 static CURLcode myssh_connect(struct connectdata *conn, bool *done);
@@ -547,14 +547,19 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
 {
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
-  struct SSHPROTO *protop = data->req.protop;
+  struct SSHPROTO *protop;
   struct ssh_conn *sshc = &conn->proto.sshc;
   int rc = SSH_NO_ERROR, err;
   char *new_readdir_line;
   int seekerr = CURL_SEEKFUNC_OK;
   const char *err_msg;
   *block = 0;                   /* we're not blocking by default */
+  if(!data) {
+    state(conn, SSH_STOP);
+    return CURLE_OK;
+  }
 
+  protop = data->req.protop;
   do {
 
     switch(sshc->state) {
@@ -828,6 +833,7 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
       /*
        * Get the "home" directory
        */
+      /* Note: this gets memory from libssh that we MUST NOT free */
       sshc->homedir = sftp_canonicalize_path(sshc->sftp_session, ".");
       if(sshc->homedir == NULL) {
         MOVE_TO_ERROR_STATE(CURLE_COULDNT_CONNECT);
@@ -1661,9 +1667,7 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
         sshc->sftp_session = NULL;
       }
 
-      Curl_safefree(sshc->homedir);
       conn->data->state.most_recent_ftp_entrypath = NULL;
-
       state(conn, SSH_SESSION_DISCONNECT);
       break;
 
@@ -1828,8 +1832,6 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
       }
 
       ssh_disconnect(sshc->ssh_session);
-
-      Curl_safefree(sshc->homedir);
       conn->data->state.most_recent_ftp_entrypath = NULL;
 
       state(conn, SSH_SESSION_FREE);
@@ -1869,9 +1871,6 @@ static CURLcode myssh_statemach_act(struct connectdata *conn, bool *block)
 
       Curl_safefree(sshc->quote_path1);
       Curl_safefree(sshc->quote_path2);
-
-      Curl_safefree(sshc->homedir);
-
       Curl_safefree(sshc->readdir_line);
       Curl_safefree(sshc->readdir_linkPath);
 
@@ -1984,6 +1983,10 @@ static CURLcode myssh_block_statemach(struct connectdata *conn,
   struct ssh_conn *sshc = &conn->proto.sshc;
   CURLcode result = CURLE_OK;
   struct Curl_easy *data = conn->data;
+  if(!data) {
+    state(conn, SSH_STOP);
+    return CURLE_OK;
+  }
 
   while((sshc->state != SSH_STOP) && !result) {
     bool block;
