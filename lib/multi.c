@@ -1248,6 +1248,9 @@ static CURLcode multi_do(struct Curl_easy *data, bool *done)
   CURLcode result = CURLE_OK;
   struct connectdata *conn = data->conn;
 
+  DEBUGASSERT(conn);
+  DEBUGASSERT(conn->handler);
+
   if(conn->handler->do_it) {
     /* generic protocol-specific function pointer set in curl_connect() */
     result = conn->handler->do_it(conn, done);
@@ -1319,7 +1322,6 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
   bool done = FALSE;
   CURLMcode rc;
   CURLcode result = CURLE_OK;
-  struct SingleRequest *k;
   timediff_t timeout_ms;
   timediff_t recv_timeout_ms;
   timediff_t send_timeout_ms;
@@ -1375,7 +1377,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
                 " milliseconds",
                 Curl_timediff(now, data->progress.t_startsingle));
         else {
-          k = &data->req;
+          struct SingleRequest *k = &data->req;
           if(k->size != -1) {
             failf(data, "Operation timed out after %" CURL_FORMAT_TIMEDIFF_T
                   " milliseconds with %" CURL_FORMAT_CURL_OFF_T " out of %"
@@ -1475,6 +1477,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
       struct connectdata *conn = data->conn;
       const char *hostname;
 
+      DEBUGASSERT(conn);
       if(conn->bits.httpproxy)
         hostname = conn->http_proxy.host.name;
       else if(conn->bits.conn_to_host)
@@ -1541,6 +1544,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
 #ifndef CURL_DISABLE_HTTP
     case CURLM_STATE_WAITPROXYCONNECT:
       /* this is HTTP-specific, but sending CONNECT to a proxy is HTTP... */
+      DEBUGASSERT(data->conn);
       result = Curl_http_connect(data->conn, &protocol_connect);
 
       if(data->conn->bits.proxy_connect_closed) {
@@ -1566,6 +1570,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
 
     case CURLM_STATE_WAITCONNECT:
       /* awaiting a completion of an asynch TCP connect */
+      DEBUGASSERT(data->conn);
       result = Curl_is_connected(data->conn, FIRSTSOCKET, &connected);
       if(connected && !result) {
 #ifndef CURL_DISABLE_HTTP
@@ -1730,6 +1735,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
 
     case CURLM_STATE_DOING:
       /* we continue DOING until the DO phase is complete */
+      DEBUGASSERT(data->conn);
       result = Curl_protocol_doing(data->conn,
                                    &dophase_done);
       if(!result) {
@@ -1753,6 +1759,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
       /*
        * When we are connected, DO MORE and then go DO_DONE
        */
+      DEBUGASSERT(data->conn);
       result = multi_do_more(data->conn, &control);
 
       if(!result) {
@@ -1777,7 +1784,8 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
       break;
 
     case CURLM_STATE_DO_DONE:
-      if(data->conn->bits.multiplex || CONN_INUSE(data->conn))
+      DEBUGASSERT(data->conn);
+      if(data->conn->bits.multiplex)
         /* Check if we can move pending requests to send pipe */
         process_pending_handles(multi); /*  multiplexed */
 
@@ -1797,6 +1805,7 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
       break;
 
     case CURLM_STATE_TOOFAST: /* limit-rate exceeded in either direction */
+      DEBUGASSERT(data->conn);
       /* if both rates are within spec, resume transfer */
       if(Curl_pgrsUpdate(data->conn))
         result = CURLE_ABORTED_BY_CALLBACK;
@@ -1869,8 +1878,6 @@ static CURLMcode multi_runsingle(struct Curl_multi *multi,
 
       /* read/write data if it is ready to do so */
       result = Curl_readwrite(data->conn, data, &done, &comeback);
-
-      k = &data->req;
 
       if(done || (result == CURLE_RECV_ERROR)) {
         /* If CURLE_RECV_ERROR happens early enough, we assume it was a race
